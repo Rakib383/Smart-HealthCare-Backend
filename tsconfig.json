@@ -1,0 +1,26 @@
+// {
+//   "compilerOptions": {
+//     "rootDir": "./src",
+//     "outDir": "./dist",
+//     "target": "esnext",
+//     "module": "nodenext",
+//     "rewriteRelativeImportExtensions": true,
+//     "erasableSyntaxOnly": true,
+//     "verbatimModuleSyntax": false,
+//     "noEmit": true,
+//     "strict": true,
+//     "skipLibCheck": true
+//   }
+// }
+
+
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2023",
+    "strict": true,
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0"
+  }
+}
