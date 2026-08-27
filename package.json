@@ -9,17 +9,17 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "lint": "pnpm eslint .",
-    "migrate":"prisma migrate dev",
-    "generate":"prisma generate",
-    "studio":"prisma studio",
-    "push":"prisma db push",
-    "pull":"prisma db pull"
+    "migrate": "prisma migrate dev",
+    "generate": "prisma generate",
+    "studio": "prisma studio",
+    "push": "prisma db push",
+    "pull": "prisma db pull"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.33.0",
-    "type": "module",
+  "type": "module",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
@@ -34,8 +34,10 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "better-auth": "^1.7.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "http-status": "^2.1.0",
     "pg": "^8.23.0"
   }
 }
