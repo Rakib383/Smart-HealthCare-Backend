@@ -140,6 +140,8 @@ const createDoctor = async (payload:ICreateDoctorPayload) => {
 
 }
 
+
+
 export const userServices = {
     createDoctor,
 
