@@ -10,5 +10,6 @@ export interface TErrorResponse {
     message: string;
     errorSources?: IErrorSources[];
     error?: unknown
+    stack?:string | undefined
 
 }

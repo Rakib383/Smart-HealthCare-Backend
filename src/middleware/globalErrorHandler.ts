@@ -18,6 +18,7 @@ export const globalErrorHandler = (err: any, req: Request, res: Response, next: 
     const errorSources: IErrorSources[]=[]
         let statusCode:number = status.INTERNAL_SERVER_ERROR;
         let message:string = "internal server error"
+        let stack: string | undefined = undefined
 
 
     if (err instanceof z.ZodError) {
@@ -30,6 +31,10 @@ export const globalErrorHandler = (err: any, req: Request, res: Response, next: 
                 message:issue.message
             })
         })
+    } else if (err instanceof Error) {
+        statusCode=status.INTERNAL_SERVER_ERROR;
+        message=err.message;
+        stack=err.stack
     }
 
 
@@ -37,7 +42,8 @@ export const globalErrorHandler = (err: any, req: Request, res: Response, next: 
         success: false,
         message,
         error: envVars.NODE_ENV === "development" ? err : undefined,
-        errorSources
+        errorSources,
+        stack:envVars.NODE_ENV === "development"?stack:undefined
     }
 
     res.status(statusCode).json(errorResponse)
