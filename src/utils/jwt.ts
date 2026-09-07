@@ -20,7 +20,6 @@ const verifyToken = (token:string,secret:string) => {
             data:decoded
         }
 
-
         
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error:any) {

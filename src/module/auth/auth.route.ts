@@ -10,5 +10,9 @@ AuthRoutes.post("/login", AuthControllers.loginUser)
 
 AuthRoutes.get("/me",checkAuth(Role.ADMIN,Role.PATIENT,Role.DOCTOR,Role.SUPER_ADMIN),AuthControllers.getMe)
 
+AuthRoutes.post("/refresh-token",AuthControllers.getNewToken)
+AuthRoutes.post("/change-password",checkAuth(Role.ADMIN,Role.SUPER_ADMIN,Role.PATIENT,Role.DOCTOR),AuthControllers.changePassword)
+AuthRoutes.post("/logout",checkAuth(Role.ADMIN,Role.SUPER_ADMIN,Role.PATIENT,Role.DOCTOR),AuthControllers.logoutUser)
+
 
 
