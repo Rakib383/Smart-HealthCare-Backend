@@ -190,6 +190,44 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
 }) 
 
 
+const forgetPassword = catchAsync(async (req: Request, res: Response) => {
+
+    
+   
+    const {email} = req.body;
+
+    await AuthServices.forgetPassword(email)
+   
+
+    sendResponse(res, {
+        httpStatusCode: status.OK,
+        success: true,
+        message: "password reset otp sent to email successfully",
+    })
+
+
+
+}) 
+
+const resetPassword = catchAsync(async (req: Request, res: Response) => {
+
+    
+   
+    const {email,otp,newPassword} = req.body;
+
+    await AuthServices.resetPassword(email,otp,newPassword)
+   
+
+    sendResponse(res, {
+        httpStatusCode: status.OK,
+        success: true,
+        message: "password reset successfully",
+    })
+
+
+}) 
+
+
 
 
 
@@ -203,5 +241,7 @@ export const AuthControllers = {
     getNewToken,
     changePassword,
     logoutUser,
-    verifyEmail
+    verifyEmail,
+    forgetPassword,
+    resetPassword
 }

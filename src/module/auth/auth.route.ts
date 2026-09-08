@@ -14,6 +14,8 @@ AuthRoutes.post("/refresh-token",AuthControllers.getNewToken)
 AuthRoutes.post("/change-password",checkAuth(Role.ADMIN,Role.SUPER_ADMIN,Role.PATIENT,Role.DOCTOR),AuthControllers.changePassword)
 AuthRoutes.post("/logout",checkAuth(Role.ADMIN,Role.SUPER_ADMIN,Role.PATIENT,Role.DOCTOR),AuthControllers.logoutUser)
 AuthRoutes.post("/verify-email",AuthControllers.verifyEmail)
+AuthRoutes.post("/forget-password",AuthControllers.forgetPassword)
+AuthRoutes.post("/reset-password",AuthControllers.resetPassword)
 
 
 
