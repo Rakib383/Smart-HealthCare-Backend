@@ -266,6 +266,18 @@ const changePassword = async (payload: IChangePasswordPayload, sessionToken: str
     })
 
 
+    if(session.user.needPasswordChange) {
+        await prisma.user.update({
+            where:{
+                id:session.user.id
+            },
+            data:{
+                needPasswordChange:false
+            }
+        })
+    }
+
+
     const accessToken = tokenUtils.getAccessToken({
         userId: session.user.id,
         role: session.user.role,
@@ -285,6 +297,8 @@ const changePassword = async (payload: IChangePasswordPayload, sessionToken: str
         isdeleted: session.user.isDeleted,
         emailVerified: session.user.emailVerified
     })
+
+
 
 
 
@@ -392,6 +406,18 @@ const resetPassword = async (email:string,otp:string,newPassword:string) => {
         }
     })
 
+
+    if (isUserExists.needPasswordChange) {
+        await prisma.user.update({
+            where: {
+                id: isUserExists.id
+            },
+            data: {
+                needPasswordChange: false
+            }
+        })
+    }
+
     await prisma.session.deleteMany({
         where:{
             userId:isUserExists.id
@@ -400,6 +426,45 @@ const resetPassword = async (email:string,otp:string,newPassword:string) => {
 
 }
 
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const googleLoginSuccess = async (session:Record<string,any>) => {
+
+    const isPatientExists = await prisma.patient.findUnique({
+        where:{
+            userId:session.user.id
+        }
+    })
+
+    if(!isPatientExists) {
+        await prisma.patient.create({
+            data:{
+                userId:session.user.id,
+                name:session.user.name,
+                email:session.user.email
+            }
+        })
+    }
+
+    const accessToken = tokenUtils.getAccessToken({
+        userId:session.user.id,
+        role:session.user.role,
+        name:session.user.name
+    })
+
+    const refreshToken = tokenUtils.getRefreshToken({
+        userId:session.user.id,
+        role:session.user.role,
+        name:session.user.name
+    })
+
+return {
+    accessToken,refreshToken
+}
+
+
+
+}
 
 
 export const AuthServices = {
@@ -411,6 +476,7 @@ export const AuthServices = {
     logoutUser,
     verifyEmail,
     resetPassword,
-    forgetPassword
+    forgetPassword,
+    googleLoginSuccess
 
 }

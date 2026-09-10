@@ -17,5 +17,8 @@ AuthRoutes.post("/verify-email",AuthControllers.verifyEmail)
 AuthRoutes.post("/forget-password",AuthControllers.forgetPassword)
 AuthRoutes.post("/reset-password",AuthControllers.resetPassword)
 
+AuthRoutes.get("/login/google",AuthControllers.googleLogin)
+AuthRoutes.get("/google/success",AuthControllers.googleLoginSuccess)
+AuthRoutes.get("/oauth/error",AuthControllers.handleOAuthError)
 
 
