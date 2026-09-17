@@ -9,7 +9,7 @@ export const doctorRoutes = Router()
 
 
 doctorRoutes.get("/",
-    checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+    // checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
     DoctorControllers.getAllDoctors);
 doctorRoutes.get("/:id",
     checkAuth(Role.ADMIN, Role.SUPER_ADMIN),

@@ -12,7 +12,7 @@ const createSpecialty = catchAsync(
 
         const payload = {
             ...req.body,
-            icon:req.file?.path
+            icon: req.file?.path
         }
 
         const result = await specialtyServices.createSpecialty(payload)

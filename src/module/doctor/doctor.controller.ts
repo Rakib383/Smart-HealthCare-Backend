@@ -3,19 +3,22 @@ import { DoctorServices } from "./doctor.service"
 import { sendResponse } from "../../shared/sendResponse"
 import { Request, Response } from "express"
 import { catchAsync } from "../../shared/catchAsync"
+import { IQueryParams } from "../../interfaces/query.interface"
 
 
 
-const getAllDoctors = catchAsync(async (Request: Request, res: Response) => {
+const getAllDoctors = catchAsync(async (req: Request, res: Response) => {
 
+    const query = req.query;
 
-    const result = await DoctorServices.getAllDoctors()
+    const result = await DoctorServices.getAllDoctors(query as IQueryParams)
 
     sendResponse(res, {
         httpStatusCode: status.OK,
         success: true,
         message: "Doctors fetched successfully",
-        data: result
+        data: result.data,
+        meta:result.meta
     })
 
 

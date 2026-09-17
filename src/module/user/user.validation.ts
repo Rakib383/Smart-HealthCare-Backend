@@ -11,7 +11,7 @@ export const createDoctorZodSchema = z.object({
         address: z.string("address is required").optional(),
         registrationNumber: z.string("registration number is required"),
         experience: z.int("experience must bean integer").nonnegative("experience can not be negative").optional(),
-        gender: z.enum([Gender.FEMALE, Gender.FEMALE], "gender must be either male or female"),
+        gender: z.enum([Gender.MALE, Gender.FEMALE], "gender must be either male or female"),
         appointmentFee: z.number("appointment fee must be a number").nonnegative("appointment fee can't be negative"),
         qualification: z.string("qualification is required").min(2, "qualification must be at least 2"),
         currentWorkingPlace: z.string("current working place is required").min(2, "current working place must be at least 2 characters"),
