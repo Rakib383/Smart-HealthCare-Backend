@@ -4,6 +4,7 @@ import { PaymentStatus } from "../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 
 
+
 const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
 
     const existingPayment = await prisma.payment.findFirst({
@@ -13,8 +14,9 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
     })
 
     if (existingPayment) {
-        console.log(`Event ${event.id} already processed. Skipping`);
-        return { message: `Event ${event.id} already processed. Skipping` }
+        console.log(`event ${event.id} already processed. skipping`);
+
+        return { message: `event ${event.id} already processed. skipping` }
     }
 
     switch (event.type) {
@@ -25,65 +27,78 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
 
             const paymentId = session.metadata?.paymentId
 
-            if (!appointmentId || !paymentId) {
-                console.error("Missing appointmentId or paymentId in session metadata");
-                return { message: "Missing appointmentId or paymentId in session metadata" }
+            if(!appointmentId || !paymentId) {
+                console.log("missing appointmentId or paymenttId in session metadata");
+
+                return {
+                    message:"missing appointmentId or paymenttId in session metadata"
+                }
             }
 
             const appointment = await prisma.appointment.findUnique({
-                where: {
-                    id: appointmentId
+                where:{
+                    id:appointmentId
                 }
             })
 
-            if (!appointment) {
-                console.error(`Appointment with id ${appointmentId} not found`);
-                return { message: `Appointment with id ${appointmentId} not found` }
+            if(!appointment) {
+                console.error(`appointment with id ${appointmentId} not found`);
+
+                return {
+                    message: `appointment with id ${appointmentId} not found`
+                }
             }
 
             await prisma.$transaction(async (tx) => {
                 await tx.appointment.update({
-                    where: {
-                        id: appointmentId
+                    where:{
+                        id:appointmentId
                     },
-                    data: {
-                        paymentStatus: session.payment_status === "paid" ? PaymentStatus.PAID : PaymentStatus.UNPAID
+                    data:{
+                        paymentStatus:session.payment_status === 'paid' ? PaymentStatus.PAID : PaymentStatus.UNPAID
                     }
-                });
+                })
 
                 await tx.payment.update({
-                    where: {
-                        id: paymentId
+                    where:{
+                        id:paymentId
                     },
-                    data: {
-                        stripeEventId: event.id,
-                        status: session.payment_status === "paid" ? PaymentStatus.PAID : PaymentStatus.UNPAID,
-                        paymentGatewayData: session as any,
+                    data:{
+                        stripeEventId:event.id,
+                        status: session.payment_status === 'paid' ? PaymentStatus.PAID : PaymentStatus.UNPAID,
+                        paymentGatewayData:session as any
                     }
-                });
-            });
+                })
+            })
 
-            console.log(`Processed checkout.session.completed for appointment ${appointmentId} and payment ${paymentId}`);
-            break;
+            console.log(`processed checkout.session.completed for appointment${appointment} and payment ${paymentId}`);
+
+            break
         }
         case "checkout.session.expired": {
+
             const session = event.data.object
 
-            console.log(`Checkout session ${session.id} expired. Marking associated payment as failed.`);
-            break;
+            console.log(`checkout session ${session.id} expired. marking associated payment as failed`);
+
+            break
 
         }
-        case "payment_intent.payment_failed": {
+        
+        case "payment_intent.payment_failed":{
+
             const session = event.data.object
 
-            console.log(`Payment intent ${session.id} failed. Marking associated payment as failed.`);
-            break;
+            console.log(`payment intent ${session.id} failed. marking associated payment as failed`);
+
+            break
         }
         default:
-            console.log(`Unhandled event type ${event.type}`);
+            console.log(`unhanlded event type ${event.type}`);
+
     }
 
-    return { message: `Webhook Event ${event.id} processed successfully` }
+    return {message:`webhook event ${event.id} processed successfully`}
 }
 
 export const PaymentService = {

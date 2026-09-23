@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import express, { Application, Request, Response } from "express";
 import { indexRoutes } from "./routes";
 import { globalErrorHandler } from "./middleware/globalErrorHandler";
@@ -9,21 +10,27 @@ import path from "path";
 import cors from "cors"
 import { envVars } from "./config/env";
 import qs from "qs";
+import { PaymentController } from "./module/payment/payment.controller";
+import cron from "node-cron"
+import { AppointmentService } from "./module/appointment/appointment.service";
 
 const app: Application = express()
 
 
 
-app.set("query parser", (str:string) => qs.parse(str))
+app.set("query parser", (str: string) => qs.parse(str))
 app.set("view engine", "ejs")
 app.set("views", path.resolve(process.cwd(), `src/templates`))
 
+
+app.post("/webhook", express.raw({ type: "application/json" }), PaymentController.handleStripeWebhookEvent)
+
 app.use(cors(
     {
-        origin:[envVars.FRONTEND_URL,envVars.BETTER_AUTH_URL],
-        credentials:true,
-        methods:["GET","POST","PUT","PATCH","DELETE"],
-        allowedHeaders:["Content-Type","Authorization"]
+        origin: [envVars.FRONTEND_URL, envVars.BETTER_AUTH_URL],
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allowedHeaders: ["Content-Type", "Authorization"]
     }
 ))
 
@@ -36,7 +43,19 @@ app.use(cookieParser())
 app.use("/api/auth", toNodeHandler(auth))
 app.use("/api/v1", indexRoutes)
 
+cron.schedule(" */25 * * * *",async () => {
+    try {
 
+        console.log("running cron job to cancel unpaid appointments");
+
+        await AppointmentService.cancelUnpaidAppointments()
+        
+    } catch (error:any) {
+
+        console.log("error occurred while canceling unpaid appointments",error.message);
+        
+    }
+})
 
 app.get("/", async (req: Request, res: Response) => {
 
@@ -45,6 +64,8 @@ app.get("/", async (req: Request, res: Response) => {
     res.send("server is fine")
 
 })
+
+
 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

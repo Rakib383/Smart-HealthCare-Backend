@@ -90,13 +90,26 @@ export const auth = betterAuth({
                         }
                     })
 
+                    if(!user) {
+                        console.error(`user with email${email} not found. can't send verification otp`);
+
+                        return
+                    }
+
+                    if(user && user.role === Role.SUPER_ADMIN) {
+                        console.log(`user with email ${email} is a super admin. skipping sending email verification otp`);
+                        return
+                    }
+
+                   
+
                     if (user && !user.emailVerified) {
                         sendEmail({
                             to: email,
                             subject: "Verify your email",
                             templateName: "otp",
                             templateData: {
-                                name: user.name,
+                                name: user.name ,
                                 otp
                             }
                         })

@@ -1,5 +1,4 @@
 import status from "http-status";
-// import { uuidv7 } from "zod/mini";
 import { v7 as uuidv7 } from "uuid";
 import { PaymentStatus, Role } from "../../generated/prisma/enums";
 import { envVars } from "../../config/env";
@@ -27,9 +26,9 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
         }
     })
 
-    const scheduleData= await prisma.schedule.findUniqueOrThrow({
-        where:{
-            id:payload.scheduleId
+    const scheduleData = await prisma.schedule.findUniqueOrThrow({
+        where: {
+            id: payload.scheduleId
         }
     })
 
@@ -69,12 +68,55 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
 
         //payment integration will be here
 
-        return appointmentData
+        const transactionId = String(uuidv7());
+
+        const paymentData = await tx.payment.create({
+            data: {
+                appointmentId: appointmentData.id,
+                amount: doctorData.appointmentFee,
+                transactionId
+            }
+        })
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            mode: "payment",
+            line_items: [
+                {
+                    price_data: {
+                        currency: "bdt",
+                        product_data: {
+                            name: `appointment with Dr. ${doctorData.name}`
+                        },
+                        unit_amount: doctorData.appointmentFee * 100
+                    },
+                    quantity: 1
+                }
+            ],
+            metadata: {
+                appointmentId: appointmentData.id,
+                paymentId: paymentData.id
+            },
+
+            success_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-success`,
+            cancel_url: `${envVars.FRONTEND_URL}/dashboard/appointments`
+
+        })
+
+        return {
+            appointmentData,
+            paymentData,
+            paymentUrl: session.url
+        }
 
 
     })
 
-return result
+    return {
+        appointment: result.appointmentData,
+        payment: result.paymentData,
+        paymentUrl: result.paymentUrl
+    }
 }
 
 const getMyAppointments = async (user: IRequestUser) => {
@@ -221,55 +263,56 @@ const getAllAppointments = async () => {
 const bookAppointmentWithPayLater = async (payload: IBookAppointmentPayload, user: IRequestUser) => {
     const patientData = await prisma.patient.findUniqueOrThrow({
         where: {
-            email: user.email,
+            email: user.email
         }
-    });
+    })
 
-    const doctorData = await prisma.doctor.findUniqueOrThrow({
+    const doctorData = await prisma.doctor.findFirstOrThrow({
         where: {
             id: payload.doctorId,
-            isDeleted: false,
+            isDeleted: false
         }
-    });
+    })
 
     const scheduleData = await prisma.schedule.findUniqueOrThrow({
         where: {
-            id: payload.scheduleId,
+            id: payload.scheduleId
         }
-    });
+    })
 
     const doctorSchedule = await prisma.doctorSchedules.findUniqueOrThrow({
         where: {
             doctorId_scheduleId: {
                 doctorId: doctorData.id,
-                scheduleId: scheduleData.id,
+                scheduleId: scheduleData.id
             }
         }
-    });
+    })
 
-    const videoCallingId = String(uuidv7());
+    const videoCallingId = String(uuidv7())
 
     const result = await prisma.$transaction(async (tx) => {
+
         const appointmentData = await tx.appointment.create({
             data: {
                 doctorId: payload.doctorId,
                 patientId: patientData.id,
                 scheduleId: doctorSchedule.scheduleId,
-                videoCallingId,
+                videoCallingId
             }
-        });
+        })
 
         await tx.doctorSchedules.update({
             where: {
                 doctorId_scheduleId: {
                     doctorId: payload.doctorId,
-                    scheduleId: payload.scheduleId,
+                    scheduleId: payload.scheduleId
                 }
             },
             data: {
-                isBooked: true,
+                isBooked: true
             }
-        });
+        })
 
         const transactionId = String(uuidv7());
 
@@ -277,18 +320,22 @@ const bookAppointmentWithPayLater = async (payload: IBookAppointmentPayload, use
             data: {
                 appointmentId: appointmentData.id,
                 amount: doctorData.appointmentFee,
-                transactionId,
+                transactionId
             }
-        });
+        })
+
 
         return {
             appointment: appointmentData,
             payment: paymentData
-        };
+        }
 
-    });
 
-    return result;
+    })
+
+    return result
+
+
 }
 
 const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
@@ -357,55 +404,57 @@ const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
 }
 
 const cancelUnpaidAppointments = async () => {
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
 
     const unpaidAppointments = await prisma.appointment.findMany({
         where: {
-            // status: AppointmentStatus.SCHEDULED,
             createdAt: {
-                lte: thirtyMinutesAgo,
+                lte: thirtyMinutesAgo
             },
-            paymentStatus: PaymentStatus.UNPAID,
-        },
-    });
+            paymentStatus: PaymentStatus.UNPAID
+        }
+    })
 
-    const appointmentToCancel = unpaidAppointments.map(appointment => appointment.id);
+    const appointmentToCancel = unpaidAppointments.map(appointment => appointment.id)
 
     await prisma.$transaction(async (tx) => {
 
         await tx.appointment.updateMany({
             where: {
                 id: {
-                    in: appointmentToCancel,
-                },
+                    in: appointmentToCancel
+                }
             },
             data: {
-                status: AppointmentStatus.CANCELED,
-            },
-        });
+                status: AppointmentStatus.CANCELED
+            }
+        })
 
         await tx.payment.deleteMany({
             where: {
                 appointmentId: {
-                    in: appointmentToCancel,
-                },
-            },
-        });
+                    in: appointmentToCancel
+                }
+            }
+        })
 
         for (const unpaidAppointment of unpaidAppointments) {
             await tx.doctorSchedules.update({
                 where: {
                     doctorId_scheduleId: {
                         doctorId: unpaidAppointment.doctorId,
-                        scheduleId: unpaidAppointment.scheduleId,
-                    },
+                        scheduleId: unpaidAppointment.scheduleId
+                    }
                 },
                 data: {
-                    isBooked: false,
-                },
-            });
+                    isBooked: false
+                }
+            })
+
         }
-    });
+    })
+
 }
 
 
