@@ -41,6 +41,8 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
         }
     })
 
+    // temporary fake calling url
+
     const videoCallingId = String(uuidv7())
 
     const result = await prisma.$transaction(async (tx) => {
@@ -66,7 +68,7 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
             }
         })
 
-        //payment integration will be here
+        //payment integration start
 
         const transactionId = String(uuidv7());
 
@@ -86,7 +88,7 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
                     price_data: {
                         currency: "bdt",
                         product_data: {
-                            name: `appointment with Dr. ${doctorData.name}`
+                            name: `appointment with ${doctorData.name}`
                         },
                         unit_amount: doctorData.appointmentFee * 100
                     },
@@ -394,7 +396,7 @@ const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
 
         success_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-success?appointment_id=${appointmentData.id}&payment_id=${appointmentData.payment.id}`,
 
-        // cancel_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-failed`,
+       
         cancel_url: `${envVars.FRONTEND_URL}/dashboard/appointments?error=payment_cancelled`,
     })
 
