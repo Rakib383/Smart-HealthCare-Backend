@@ -11,6 +11,8 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
     const user = req.user as IRequestUser;
     const payload = req.body;
 
+    // console.log(req.files);
+
 
     const result = await PatientService.updateMyProfile(user, payload);
 
