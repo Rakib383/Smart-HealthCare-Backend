@@ -1,5 +1,5 @@
 import express from 'express';
-import { Role } from '../../../generated/prisma/browser';
+import { Role } from '../../generated/prisma/browser';
 import { checkAuth } from '../../middleware/checkAuth';
 import { StatsController } from './stats.controller';
 

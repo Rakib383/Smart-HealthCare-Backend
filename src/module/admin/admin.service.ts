@@ -111,6 +111,10 @@ const deleteAdmin = async (id: string, user: IRequestUser) => {
     return result;
 }
 
+const changeUserStatus = async () => {
+    
+}
+
 export const AdminService = {
     getAllAdmins,
     getAdminById,
