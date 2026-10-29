@@ -6,6 +6,7 @@ export interface IErrorSources {
 }
 
 export interface TErrorResponse {
+    statusCode?:number;
     success: boolean;
     message: string;
     errorSources?: IErrorSources[];
