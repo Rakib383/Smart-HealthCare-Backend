@@ -39,6 +39,11 @@ interface EnvConfig {
     },
     SUPER_ADMIN_EMAIL: string;
     SUPER_ADMIN_PASSWORD: string;
+    RAG:{
+        OPENROUTER_API_KEY:string;
+        OPENROUTER_EMBEDDING_MODEL:string;
+        OPENROUTER_LLM_MODEL:string;
+    }
 }
 
 
@@ -117,6 +122,11 @@ const loadEnvVariables = (): EnvConfig => {
         },
         SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL as string,
         SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD as string,
+        RAG: {
+            OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY as string,
+            OPENROUTER_EMBEDDING_MODEL: process.env.OPENROUTER_EMBEDDING_MODEL as string,
+            OPENROUTER_LLM_MODEL: process.env.OPENROUTER_LLM_MODEL as string,
+        }
 
     }
 }
