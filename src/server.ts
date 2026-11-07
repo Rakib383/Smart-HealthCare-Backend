@@ -3,6 +3,7 @@ import { Server } from 'http';
 import app from './app';
 import { envVars } from './config/env';
 import { seedSuperAdmin } from './utils/seed';
+import { redisService } from './lib/redis';
 
 
 let server:Server
@@ -11,6 +12,7 @@ const bootstrap = async () => {
     try {
 
         await seedSuperAdmin()
+        await redisService.connect()
         server = app.listen(envVars.PORT, () => {
             console.log(`server is running on ${envVars.PORT}`);
         });
