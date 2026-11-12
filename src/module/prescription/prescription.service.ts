@@ -7,7 +7,10 @@ import AppError from "../../errorHelpers/appError";
 import { deleteFileFromCloudinary, uploadFileToCloudinary } from "../../config/cloudinary.config";
 import { sendEmail } from "../../utils/email";
 import { Role } from "../../generated/prisma/enums";
+import { Prisma, Prescription } from "../../generated/prisma/client";
 import { generatePrescriptionPDF } from "./prescription.utils";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
 
 
 const givePrescription = async (user: IRequestUser, payload: ICreatePrescriptionPayload) => {
@@ -176,16 +179,39 @@ const myPrescriptions = async (user: IRequestUser) => {
 
 };
 
-const getAllPrescriptions = async () => {
-    const result = await prisma.prescription.findMany({
-        include: {
+const getAllPrescriptions = async (query: IQueryParams) => {
+    const queryBuilder = new QueryBuilder<
+        Prescription,
+        Prisma.PrescriptionWhereInput,
+        Prisma.PrescriptionInclude
+    >(prisma.prescription, query, {
+        searchableFields: [
+            "id",
+            "appointmentId",
+            "instructions",
+            "patient.name",
+            "patient.email",
+            "doctor.name",
+            "doctor.email",
+        ],
+        filterableFields: ["id", "appointmentId", "patientId", "doctorId"],
+    });
+
+    return queryBuilder
+        .search()
+        .filter()
+        .paginate()
+        .include({
             patient: true,
             doctor: true,
-            appointment: true,
-        }
-    })
-
-    return result;
+            appointment: {
+                include: {
+                    schedule: true,
+                },
+            },
+        })
+        .sort()
+        .execute();
 };
 
 const updatePrescription = async (user: IRequestUser, prescriptionId: string, payload: any) => {

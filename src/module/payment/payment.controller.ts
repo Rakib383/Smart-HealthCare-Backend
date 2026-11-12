@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from "express";
 import status from "http-status";
 import { envVars } from "../../config/env";
@@ -8,6 +5,18 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { PaymentService } from "./payment.service";
 import { stripe } from "../../config/stripe.config";
+import { IQueryParams } from "../../interfaces/query.interface";
+
+const getAllPayments = catchAsync(async (req: Request, res: Response) => {
+    const result = await PaymentService.getAllPayments(req.query as IQueryParams);
+    sendResponse(res, {
+        success: true,
+        httpStatusCode: status.OK,
+        message: "Payments retrieved successfully",
+        data: result.data,
+        meta: result.meta,
+    });
+});
 
 const handleStripeWebhookEvent = catchAsync(async (req:Request,res:Response) => {
     const signature = req.headers['stripe-signature'] as string 
@@ -60,5 +69,6 @@ const handleStripeWebhookEvent = catchAsync(async (req:Request,res:Response) => 
 })
 
 export const PaymentController = {
+    getAllPayments,
     handleStripeWebhookEvent
 }

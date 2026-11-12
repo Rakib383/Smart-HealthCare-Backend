@@ -8,7 +8,11 @@ import { validateRequest } from '../../shared/validateRequest';
 
 const router = express.Router();
 
-router.get('/', ReviewController.getAllReviews);
+router.get(
+    '/',
+    checkAuth(Role.SUPER_ADMIN, Role.ADMIN),
+    ReviewController.getAllReviews
+);
 
 router.post(
     '/',

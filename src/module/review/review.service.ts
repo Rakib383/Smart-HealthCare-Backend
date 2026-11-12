@@ -2,7 +2,10 @@ import status from "http-status";
 import AppError from "../../errorHelpers/appError";
 import { PaymentStatus, Role } from "../../generated/prisma/enums";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
+import { IQueryParams } from "../../interfaces/query.interface";
 import { prisma } from "../../lib/prisma";
+import { Prisma, Review } from "../../generated/prisma/client";
+import { QueryBuilder } from "../../utils/QueryBuilder";
 import { ICreateReviewPayload, IUpdateReviewPayload } from "./review.interface";
 
 const giveReview = async (user: IRequestUser, payload: ICreateReviewPayload) => {
@@ -71,17 +74,39 @@ const giveReview = async (user: IRequestUser, payload: ICreateReviewPayload) => 
 
 }
 
-const getAllReviews = async (
-) => {
-    const reviews = await prisma.review.findMany({
-        include: {
-            doctor: true,
-            patient: true,
-            appointment: true
-        }
+const getAllReviews = async (query: IQueryParams) => {
+    const queryBuilder = new QueryBuilder<
+        Review,
+        Prisma.ReviewWhereInput,
+        Prisma.ReviewInclude
+    >(prisma.review, query, {
+        searchableFields: [
+            "id",
+            "appointmentId",
+            "comment",
+            "patient.name",
+            "patient.email",
+            "doctor.name",
+            "doctor.email",
+        ],
+        filterableFields: ["id", "appointmentId", "patientId", "doctorId", "rating"],
     });
 
-    return reviews;
+    return queryBuilder
+        .search()
+        .filter()
+        .paginate()
+        .include({
+            doctor: true,
+            patient: true,
+            appointment: {
+                include: {
+                    schedule: true,
+                },
+            },
+        })
+        .sort()
+        .execute();
 };
 
 const myReviews = async (user: IRequestUser) => {

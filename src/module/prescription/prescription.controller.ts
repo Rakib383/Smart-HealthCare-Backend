@@ -3,6 +3,7 @@ import httpStatus from 'http-status';
 import { PrescriptionService } from './prescription.service';
 import { catchAsync } from '../../shared/catchAsync';
 import { sendResponse } from '../../shared/sendResponse';
+import { IQueryParams } from '../../interfaces/query.interface';
 
 const givePrescription = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body;
@@ -28,12 +29,13 @@ const myPrescriptions = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllPrescriptions = catchAsync(async (req: Request, res: Response) => {
-    const result = await PrescriptionService.getAllPrescriptions();
+    const result = await PrescriptionService.getAllPrescriptions(req.query as IQueryParams);
     sendResponse(res, {
         httpStatusCode: httpStatus.OK,
         success: true,
         message: 'Prescriptions retrieval successfully',
-        data: result
+        data: result.data,
+        meta: result.meta,
     });
 });
 

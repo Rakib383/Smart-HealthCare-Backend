@@ -1,11 +1,92 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Stripe from "stripe";
 import { PaymentStatus } from "../../generated/prisma/enums";
+import { Prisma } from "../../generated/prisma/client";
+import status from "http-status";
+import AppError from "../../errorHelpers/appError";
 import { uploadFileToCloudinary } from "../../config/cloudinary.config";
 import { prisma } from "../../lib/prisma";
+import { IQueryParams } from "../../interfaces/query.interface";
 import { sendEmail } from "../../utils/email";
 import { generateInvoicePdf } from "./payment.utils";
 
+const getAllPayments = async (query: IQueryParams) => {
+    const page = Number(query.page ?? "1");
+    const limit = Number(query.limit ?? "10");
+    const isPaymentStatus = (value: string): value is PaymentStatus =>
+        value === PaymentStatus.PAID || value === PaymentStatus.UNPAID;
+
+    if (!Number.isInteger(page) || page < 1) {
+        throw new AppError(status.BAD_REQUEST, "Page must be a positive integer.");
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        throw new AppError(status.BAD_REQUEST, "Limit must be an integer between 1 and 100.");
+    }
+
+    if (query.status && !isPaymentStatus(query.status)) {
+        throw new AppError(status.BAD_REQUEST, "Status must be PAID or UNPAID.");
+    }
+
+    const paymentStatus = query.status && isPaymentStatus(query.status) ? query.status : undefined;
+    if (query.searchTerm !== undefined && (typeof query.searchTerm !== "string" || query.searchTerm.length > 100)) {
+        throw new AppError(status.BAD_REQUEST, "Search term must be a string of 100 characters or fewer.");
+    }
+
+    const searchTerm = query.searchTerm?.trim();
+    const textFilter = searchTerm
+        ? { contains: searchTerm, mode: "insensitive" as const }
+        : undefined;
+    const where: Prisma.PaymentWhereInput = {
+        ...(paymentStatus ? { status: paymentStatus } : {}),
+        ...(textFilter ? {
+            OR: [
+                { id: textFilter },
+                { transactionId: textFilter },
+                { appointmentId: textFilter },
+                { appointment: { is: { patient: { is: { name: textFilter } } } } },
+                { appointment: { is: { patient: { is: { email: textFilter } } } } },
+                { appointment: { is: { doctor: { is: { name: textFilter } } } } },
+                { appointment: { is: { doctor: { is: { email: textFilter } } } } },
+            ],
+        } : {}),
+    };
+
+    const [total, data] = await Promise.all([
+        prisma.payment.count({ where }),
+        prisma.payment.findMany({
+            where,
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: { createdAt: "desc" },
+            include: {
+                appointment: {
+                    include: {
+                        doctor: {
+                            select: { id: true, name: true, email: true, profilePhoto: true },
+                        },
+                        patient: {
+                            select: { id: true, name: true, email: true, profilePhoto: true },
+                        },
+                        schedule: {
+                            select: { startDateTime: true, endDateTime: true },
+                        },
+                    },
+                },
+            },
+        }),
+    ]);
+
+    return {
+        data,
+        meta: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        },
+    };
+};
 
 const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
 
@@ -166,5 +247,6 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
 }
 
 export const PaymentService = {
+    getAllPayments,
     handlerStripeWebhookEvent
 }

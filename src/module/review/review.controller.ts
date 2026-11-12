@@ -3,6 +3,7 @@ import httpStatus from "http-status";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { ReviewService } from "./review.service";
+import { IQueryParams } from "../../interfaces/query.interface";
 
 const giveReview = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body;
@@ -18,12 +19,13 @@ const giveReview = catchAsync(async (req: Request, res: Response) => {
 
 const getAllReviews = catchAsync(async (req: Request, res: Response) => {
 
-    const result = await ReviewService.getAllReviews();
+    const result = await ReviewService.getAllReviews(req.query as IQueryParams);
     sendResponse(res, {
         httpStatusCode: httpStatus.OK,
         success: true,
         message: 'Reviews retrieval successfully',
-        data: result
+        data: result.data,
+        meta: result.meta,
     });
 });
 
