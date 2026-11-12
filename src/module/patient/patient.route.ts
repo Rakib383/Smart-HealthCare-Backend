@@ -11,7 +11,8 @@ import { updateMyPatientProfileMiddleware} from "./patient.middlewares";
 
 export const patientRoutes = Router();
 
-
+patientRoutes.get("/", checkAuth(Role.ADMIN, Role.SUPER_ADMIN), PatientController.getAllPatients);
+patientRoutes.delete("/:id", checkAuth(Role.ADMIN, Role.SUPER_ADMIN), PatientController.deletePatient);
 
 
 patientRoutes.patch("/update-my-profile", checkAuth(Role.PATIENT), multerUpload.fields([

@@ -16,7 +16,7 @@ validateRequest(specialtyValidation.createSpecialtyZodSchema),
 
 specialtyRoutes.get("/", specialtyControllers.getAllSpecialties)
 
-specialtyRoutes.delete("/", checkAuth(Role.ADMIN, Role.SUPER_ADMIN), specialtyControllers.deleteSpecialty)
+specialtyRoutes.delete("/:id", checkAuth(Role.ADMIN, Role.SUPER_ADMIN), specialtyControllers.deleteSpecialty)
 
 
 

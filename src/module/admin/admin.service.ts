@@ -72,7 +72,7 @@ const deleteAdmin = async (id: string, user: IRequestUser) => {
         throw new AppError(status.NOT_FOUND, "Admin Or Super Admin not found");
     }
 
-    if (isAdminExist.id === user.userId) {
+    if (isAdminExist.userId === user.userId) {
         throw new AppError(status.BAD_REQUEST, "You cannot delete yourself");
     }
 

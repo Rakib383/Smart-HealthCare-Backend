@@ -3,6 +3,70 @@ import { IRequestUser } from "../../interfaces/requestUser.interface";
 import { prisma } from "../../lib/prisma";
 import { IUpdatePatientHealthDataPayload, IUpdatePatientProfilePayload } from "./patient.interface";
 import { convertToDateTime } from "./patient.utils";
+import status from "http-status";
+import AppError from "../../errorHelpers/appError";
+import { UserStatus } from "../../generated/prisma/enums";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { Patient, Prisma } from "../../generated/prisma/client";
+
+const getAllPatients = async (query: IQueryParams) => {
+    const queryBuilder = new QueryBuilder<Patient, Prisma.PatientWhereInput, Prisma.PatientInclude>(
+        prisma.patient,
+        query,
+        {
+            searchableFields: ["name", "email"],
+            filterableFields: ["user.status"],
+        },
+    );
+
+    return await queryBuilder
+        .search()
+        .filter()
+        .where({
+            isDeleted: false,
+            user: { isDeleted: false },
+        })
+        .include({ user: true })
+        .paginate()
+        .sort()
+        .execute();
+};
+
+const deletePatient = async (id: string) => {
+    const patient = await prisma.patient.findUnique({
+        where: { id },
+    });
+
+    if (!patient || patient.isDeleted) {
+        throw new AppError(status.NOT_FOUND, "Patient not found");
+    }
+
+    await prisma.$transaction(async (tx) => {
+        await tx.patient.update({
+            where: { id },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+            },
+        });
+
+        await tx.user.update({
+            where: { id: patient.userId },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+                status: UserStatus.DELETED,
+            },
+        });
+
+        await tx.session.deleteMany({
+            where: { userId: patient.userId },
+        });
+    });
+
+    return { message: "Patient deleted successfully" };
+};
 
 
 const updateMyProfile = async (user:IRequestUser,payload:IUpdatePatientProfilePayload) => {
@@ -124,5 +188,7 @@ const updateMyProfile = async (user:IRequestUser,payload:IUpdatePatientProfilePa
 }
 
 export const PatientService = {
+    getAllPatients,
+    deletePatient,
     updateMyProfile
 }

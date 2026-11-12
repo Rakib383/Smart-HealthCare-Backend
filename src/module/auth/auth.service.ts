@@ -341,6 +341,8 @@ const verifyEmail = async (email:string,otp:string) => {
             }
         })
     }
+
+    return result
 }
 
 

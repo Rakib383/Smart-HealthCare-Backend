@@ -176,22 +176,21 @@ const logoutUser = catchAsync(async (req: Request, res: Response) => {
 
 const verifyEmail = catchAsync(async (req: Request, res: Response) => {
 
-    
-   
-    const {email,otp} = req.body;
+    const { email, otp } = req.body;
 
-    await AuthServices.verifyEmail(email,otp)
-   
+    const result = await AuthServices.verifyEmail(email, otp)
+
+    if (result.token) {
+        tokenUtils.setBetterAuthSessionCookie(res, result.token);
+    }
 
     sendResponse(res, {
         httpStatusCode: status.OK,
         success: true,
         message: "Email verified successfully",
+        data: { token: result.token }
     })
-
-
-
-}) 
+})
 
 
 const forgetPassword = catchAsync(async (req: Request, res: Response) => {

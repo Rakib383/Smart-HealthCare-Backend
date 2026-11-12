@@ -4,6 +4,8 @@ export const doctorScheduleSearchableFields = [
     'id',
     'doctorId',
     'scheduleId',
+    'doctor.name',
+    'doctor.email',
 ]
 
 export const doctorScheduleFilterableFields = [
