@@ -12,6 +12,7 @@ import { updateMyPatientProfileMiddleware} from "./patient.middlewares";
 export const patientRoutes = Router();
 
 patientRoutes.get("/", checkAuth(Role.ADMIN, Role.SUPER_ADMIN), PatientController.getAllPatients);
+patientRoutes.get("/my-health-records", checkAuth(Role.PATIENT), PatientController.getMyHealthRecords);
 patientRoutes.delete("/:id", checkAuth(Role.ADMIN, Role.SUPER_ADMIN), PatientController.deletePatient);
 
 

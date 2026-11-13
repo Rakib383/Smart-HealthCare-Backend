@@ -33,6 +33,22 @@ const getAllPatients = async (query: IQueryParams) => {
         .execute();
 };
 
+const getMyHealthRecords = async (user: IRequestUser) => {
+    return prisma.patient.findUniqueOrThrow({
+        where: {
+            email: user.email
+        },
+        include: {
+            patientHealthData: true,
+            medicalReports: {
+                orderBy: {
+                    createdAt: "desc"
+                }
+            }
+        }
+    });
+};
+
 const deletePatient = async (id: string) => {
     const patient = await prisma.patient.findUnique({
         where: { id },
@@ -145,9 +161,20 @@ const updateMyProfile = async (user:IRequestUser,payload:IUpdatePatientProfilePa
             for(const report of payload.medicalReports) {
 
                 if(report.shouldDelete && report.reportId) {
+                    const reportToDelete = await tx.medicalReport.findFirst({
+                        where: {
+                            id: report.reportId,
+                            patientId: patientData.id
+                        }
+                    })
+
+                    if (!reportToDelete) {
+                        throw new AppError(status.NOT_FOUND, "Medical report not found")
+                    }
+
                     const deletedReport = await tx.medicalReport.delete({
                         where:{
-                            id:report.reportId
+                            id:reportToDelete.id
                         }
                     })
 
@@ -189,6 +216,7 @@ const updateMyProfile = async (user:IRequestUser,payload:IUpdatePatientProfilePa
 
 export const PatientService = {
     getAllPatients,
+    getMyHealthRecords,
     deletePatient,
     updateMyProfile
 }

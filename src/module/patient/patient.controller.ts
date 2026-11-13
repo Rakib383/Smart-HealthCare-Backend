@@ -7,6 +7,18 @@ import { PatientService } from "./patient.service";
 import { IQueryParams } from "../../interfaces/query.interface";
 
 
+const getMyHealthRecords = catchAsync(async (req: Request, res: Response) => {
+    const user = req.user as IRequestUser;
+    const result = await PatientService.getMyHealthRecords(user);
+
+    sendResponse(res, {
+        success: true,
+        httpStatusCode: status.OK,
+        message: "Health records fetched successfully",
+        data: result
+    });
+});
+
 const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
 
     const user = req.user as IRequestUser;
@@ -50,6 +62,7 @@ const deletePatient = catchAsync(async (req: Request, res: Response) => {
 
 export const PatientController = {
     getAllPatients,
+    getMyHealthRecords,
     deletePatient,
     updateMyProfile
 }

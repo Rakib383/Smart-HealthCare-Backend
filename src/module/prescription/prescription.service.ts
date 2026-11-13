@@ -154,7 +154,11 @@ const myPrescriptions = async (user: IRequestUser) => {
             include: {
                 patient: true,
                 doctor: true,
-                appointment: true,
+                appointment: {
+                    include: {
+                        schedule: true
+                    }
+                },
             }
         });
         return prescriptions;
@@ -170,7 +174,11 @@ const myPrescriptions = async (user: IRequestUser) => {
             include: {
                 patient: true,
                 doctor: true,
-                appointment: true,
+                appointment: {
+                    include: {
+                        schedule: true
+                    }
+                },
             }
         });
         return prescriptions;
