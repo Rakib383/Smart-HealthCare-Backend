@@ -131,7 +131,12 @@ const myReviews = async (user: IRequestUser) => {
             },
             include: {
                 patient: true,
-                appointment: true
+                doctor: true,
+                appointment: {
+                    include: {
+                        schedule: true
+                    }
+                }
             }
         });
     }
@@ -148,7 +153,12 @@ const myReviews = async (user: IRequestUser) => {
             },
             include: {
                 doctor: true,
-                appointment: true
+                patient: true,
+                appointment: {
+                    include: {
+                        schedule: true
+                    }
+                }
             }
         });
     }

@@ -167,39 +167,112 @@ const getMyAppointments = async (user: IRequestUser) => {
 
 }
 
-// 1. Completed Or Cancelled Appointments should not be allowed to update status
-// 2. Doctors can only update Appoinment status from schedule to inprogress or inprogress to complted or schedule to cancelled.
-// 3. Patients can only cancel the scheduled appointment if it scheduled not completed or cancelled or inprogress. 
-// 4. Admin and Super admin can update to any status.
-
 const changeAppointmentStatus = async (appointmentId: string, appointmentStatus: AppointmentStatus, user: IRequestUser) => {
     const appointmentData = await prisma.appointment.findUniqueOrThrow({
         where: {
-            id: appointmentId,
-            // status: AppointmentStatus.SCHEDULED
+            id: appointmentId
         },
         include: {
             doctor: true
         }
     });
 
-    // if (!appointmentData) {
-    //     throw new AppError(status.NOT_FOUND, "Appointment not found or already completed/cancelled");
-    // }
-
+    let patientId: string | undefined;
     if (user?.role === Role.DOCTOR) {
-        if (!(user?.email === appointmentData.doctor.email))
-            throw new AppError(status.BAD_REQUEST, "This is not your appointment")
+        if (user.email !== appointmentData.doctor.email) {
+            throw new AppError(status.FORBIDDEN, "This is not your appointment");
+        }
+
+        const isAllowedTransition =
+            (appointmentData.status === AppointmentStatus.SCHEDULED
+                && (appointmentStatus === AppointmentStatus.INPROGRESS
+                    || appointmentStatus === AppointmentStatus.CANCELED))
+            || (appointmentData.status === AppointmentStatus.INPROGRESS
+                && appointmentStatus === AppointmentStatus.COMPLETED);
+
+        if (!isAllowedTransition) {
+            throw new AppError(status.BAD_REQUEST, "This appointment status cannot be changed to the selected status");
+        }
+    } else if (user?.role === Role.PATIENT) {
+        const patientData = await prisma.patient.findUniqueOrThrow({
+            where: {
+                email: user.email
+            }
+        });
+
+        if (patientData.id !== appointmentData.patientId) {
+            throw new AppError(status.FORBIDDEN, "This is not your appointment");
+        }
+
+        if (appointmentData.status !== AppointmentStatus.SCHEDULED
+            || appointmentStatus !== AppointmentStatus.CANCELED) {
+            throw new AppError(status.BAD_REQUEST, "Only scheduled appointments can be canceled");
+        }
+
+        patientId = patientData.id;
     }
 
-    return await prisma.appointment.update({
-        where: {
-            id: appointmentId
-        },
-        data: {
-            status: appointmentStatus
+    return prisma.$transaction(async (tx) => {
+        if (user?.role === Role.DOCTOR) {
+            const updated = await tx.appointment.updateMany({
+                where: {
+                    id: appointmentId,
+                    doctorId: appointmentData.doctorId,
+                    status: appointmentData.status
+                },
+                data: {
+                    status: appointmentStatus
+                }
+            });
+
+            if (updated.count !== 1) {
+                throw new AppError(status.CONFLICT, "This appointment has already changed");
+            }
+        } else if (user?.role === Role.PATIENT && patientId) {
+            const updated = await tx.appointment.updateMany({
+                where: {
+                    id: appointmentId,
+                    patientId,
+                    status: AppointmentStatus.SCHEDULED
+                },
+                data: {
+                    status: appointmentStatus
+                }
+            });
+
+            if (updated.count !== 1) {
+                throw new AppError(status.CONFLICT, "This appointment has already changed");
+            }
+        } else {
+            await tx.appointment.update({
+                where: {
+                    id: appointmentId
+                },
+                data: {
+                    status: appointmentStatus
+                }
+            });
         }
-    })
+
+        if (appointmentStatus === AppointmentStatus.CANCELED) {
+            await tx.doctorSchedules.updateMany({
+                where: {
+                    doctorId: appointmentData.doctorId,
+                    scheduleId: appointmentData.scheduleId,
+                    isBooked: true
+                },
+                data: {
+                    isBooked: false
+                }
+            });
+        }
+
+        return tx.appointment.findUniqueOrThrow({
+            where: {
+                id: appointmentId
+            }
+        });
+    });
 
 }
 
