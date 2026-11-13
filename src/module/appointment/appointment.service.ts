@@ -1,6 +1,6 @@
 import status from "http-status";
 import { v7 as uuidv7 } from "uuid";
-import { PaymentStatus, Role } from "../../generated/prisma/enums";
+import { PaymentStatus, Role, UserStatus } from "../../generated/prisma/enums";
 import { envVars } from "../../config/env";
 import { stripe } from "../../config/stripe.config";
 
@@ -22,7 +22,11 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
     const doctorData = await prisma.doctor.findFirstOrThrow({
         where: {
             id: payload.doctorId,
-            isDeleted: false
+            isDeleted: false,
+            user: {
+                isDeleted: false,
+                status: UserStatus.ACTIVE
+            }
         }
     })
 
@@ -32,39 +36,36 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
         }
     })
 
-    const doctorSchedule = await prisma.doctorSchedules.findUniqueOrThrow({
-        where: {
-            doctorId_scheduleId: {
-                doctorId: doctorData.id,
-                scheduleId: scheduleData.id
-            }
-        }
-    })
+    if (scheduleData.startDateTime <= new Date()) {
+        throw new AppError(status.BAD_REQUEST, "This appointment time is no longer available");
+    }
 
     // temporary fake calling url
 
     const videoCallingId = String(uuidv7())
 
     const result = await prisma.$transaction(async (tx) => {
+        const reservedSlot = await tx.doctorSchedules.updateMany({
+            where: {
+                doctorId: doctorData.id,
+                scheduleId: scheduleData.id,
+                isBooked: false
+            },
+            data: {
+                isBooked: true
+            }
+        });
+
+        if (reservedSlot.count !== 1) {
+            throw new AppError(status.CONFLICT, "This appointment time is no longer available");
+        }
 
         const appointmentData = await tx.appointment.create({
             data: {
                 doctorId: payload.doctorId,
                 patientId: patientData.id,
-                scheduleId: doctorSchedule.scheduleId,
+                scheduleId: scheduleData.id,
                 videoCallingId
-            }
-        })
-
-        await tx.doctorSchedules.update({
-            where: {
-                doctorId_scheduleId: {
-                    doctorId: payload.doctorId,
-                    scheduleId: payload.scheduleId
-                }
-            },
-            data: {
-                isBooked: true
             }
         })
 
@@ -100,8 +101,8 @@ const bookAppointment = async (payload: IBookAppointmentPayload, user: IRequestU
                 paymentId: paymentData.id
             },
 
-            success_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-success`,
-            cancel_url: `${envVars.FRONTEND_URL}/dashboard/appointments`
+            success_url: `${envVars.FRONTEND_URL}/payment/success?appointment_id=${appointmentData.id}&payment_id=${paymentData.id}`,
+            cancel_url: `${envVars.FRONTEND_URL}/dashboard/my-appointments?error=payment_cancelled`
 
         })
 
@@ -272,7 +273,11 @@ const bookAppointmentWithPayLater = async (payload: IBookAppointmentPayload, use
     const doctorData = await prisma.doctor.findFirstOrThrow({
         where: {
             id: payload.doctorId,
-            isDeleted: false
+            isDeleted: false,
+            user: {
+                isDeleted: false,
+                status: UserStatus.ACTIVE
+            }
         }
     })
 
@@ -282,37 +287,34 @@ const bookAppointmentWithPayLater = async (payload: IBookAppointmentPayload, use
         }
     })
 
-    const doctorSchedule = await prisma.doctorSchedules.findUniqueOrThrow({
-        where: {
-            doctorId_scheduleId: {
-                doctorId: doctorData.id,
-                scheduleId: scheduleData.id
-            }
-        }
-    })
+    if (scheduleData.startDateTime <= new Date()) {
+        throw new AppError(status.BAD_REQUEST, "This appointment time is no longer available");
+    }
 
     const videoCallingId = String(uuidv7())
 
     const result = await prisma.$transaction(async (tx) => {
+        const reservedSlot = await tx.doctorSchedules.updateMany({
+            where: {
+                doctorId: doctorData.id,
+                scheduleId: scheduleData.id,
+                isBooked: false
+            },
+            data: {
+                isBooked: true
+            }
+        });
+
+        if (reservedSlot.count !== 1) {
+            throw new AppError(status.CONFLICT, "This appointment time is no longer available");
+        }
 
         const appointmentData = await tx.appointment.create({
             data: {
                 doctorId: payload.doctorId,
                 patientId: patientData.id,
-                scheduleId: doctorSchedule.scheduleId,
+                scheduleId: scheduleData.id,
                 videoCallingId
-            }
-        })
-
-        await tx.doctorSchedules.update({
-            where: {
-                doctorId_scheduleId: {
-                    doctorId: payload.doctorId,
-                    scheduleId: payload.scheduleId
-                }
-            },
-            data: {
-                isBooked: true
             }
         })
 
@@ -394,10 +396,9 @@ const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
             paymentId: appointmentData.payment.id,
         },
 
-        success_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-success?appointment_id=${appointmentData.id}&payment_id=${appointmentData.payment.id}`,
+        success_url: `${envVars.FRONTEND_URL}/payment/success?appointment_id=${appointmentData.id}&payment_id=${appointmentData.payment.id}`,
 
-       
-        cancel_url: `${envVars.FRONTEND_URL}/dashboard/appointments?error=payment_cancelled`,
+        cancel_url: `${envVars.FRONTEND_URL}/dashboard/my-appointments?error=payment_cancelled`,
     })
 
     return {

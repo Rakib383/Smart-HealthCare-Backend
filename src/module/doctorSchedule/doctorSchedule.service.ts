@@ -1,4 +1,5 @@
 import { DoctorSchedules, Prisma } from "../../generated/prisma/client";
+import { UserStatus } from "../../generated/prisma/enums";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
 import { prisma } from "../../lib/prisma";
@@ -105,6 +106,35 @@ const getDoctorScheduleById = async (doctorId: string, scheduleId: string) => {
     return doctorSchedule;
 }
 
+const getAvailableDoctorSchedules = async (doctorId: string) => {
+    return prisma.doctorSchedules.findMany({
+        where: {
+            doctorId,
+            isBooked: false,
+            schedule: {
+                startDateTime: {
+                    gt: new Date()
+                }
+            },
+            doctor: {
+                isDeleted: false,
+                user: {
+                    isDeleted: false,
+                    status: UserStatus.ACTIVE
+                }
+            }
+        },
+        include: {
+            schedule: true
+        },
+        orderBy: {
+            schedule: {
+                startDateTime: "asc"
+            }
+        }
+    });
+};
+
 
 const updateMyDoctorSchedule = async (user: IRequestUser, payload: IUpdateDoctorSchedulePayload) => {
     const doctorData = await prisma.doctor.findUniqueOrThrow({
@@ -166,6 +196,7 @@ export const DoctorScheduleService = {
     createMyDoctorSchedule,
     getAllDoctorSchedules,
     getDoctorScheduleById,
+    getAvailableDoctorSchedules,
     updateMyDoctorSchedule,
     deleteMyDoctorSchedule,
     getMyDoctorSchedules
